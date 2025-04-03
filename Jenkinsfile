@@ -3,9 +3,10 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'dev', url: 'https://github.com/Abisheak-create/devops-project.git'
+                git 'https://github.com/barathdemo/devops-build.git'
             }
         }
+        
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -13,24 +14,27 @@ pipeline {
                 }
             }
         }
+
         stage('Docker Build') {
             steps {
                 script {
-                    sh 'docker build -t abisheak469/dev:$BUILD_NUMBER .'
+                    sh 'docker build -t barath2707/dev:tagname .'
                 }
             }
         }
+
         stage('Docker Push') {
             steps {
                 script {
-                    sh 'docker push abisheak469/dev:$BUILD_NUMBER'
+                    sh 'docker push barath2707/dev:tagname'
                 }
             }
         }
+
         stage('Container run') {
             steps {
                 script {
-                    sh 'docker run -d -p 80:80 abisheak469/dev:$BUILD_NUMBER'
+                    sh 'docker run -d -p 8081:80 barath2707/dev:tagname'
                 }
             }
         }
