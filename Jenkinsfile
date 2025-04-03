@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/barathdemo/devops-build.git'
+                git branch: 'dev', url:'https://github.com/barathdemo/devops-build.git'
             }
         }
         
