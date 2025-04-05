@@ -1,40 +1,55 @@
 pipeline {
     agent any
+
+    environment {
+        DEV_IMAGE = 'barath2707/dev'
+        PROD_IMAGE = 'barath2707/prod'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'dev', url:'https://github.com/barathdemo/devops-build.git'
+                checkout scm
             }
         }
-        
+
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"'
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
         }
 
-        stage('Docker Build') {
+        stage('Docker Build & Push') {
             steps {
                 script {
-                    sh 'docker build -t barath2707/dev:tagname .'
+                    def branch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    echo "Current Branch: ${branch}"
+
+                    if (branch == 'dev') {
+                        sh "docker build -t ${DEV_IMAGE}:${IMAGE_TAG} ."
+                        sh "docker push ${DEV_IMAGE}:${IMAGE_TAG}"
+                    } else if (branch == 'master') {
+                        sh "docker build -t ${PROD_IMAGE}:${IMAGE_TAG} ."
+                        sh "docker push ${PROD_IMAGE}:${IMAGE_TAG}"
+                    } else {
+                        echo "No Docker push configured for this branch"
+                    }
                 }
             }
         }
 
-        stage('Docker Push') {
-            steps {
-                script {
-                    sh 'docker push barath2707/dev:tagname'
+        stage('Run Container (Only Dev)') {
+            when {
+                expression {
+                    return sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim() == 'dev'
                 }
             }
-        }
-
-        stage('Container run') {
             steps {
                 script {
-                    sh 'docker run -d -p 8081:80 barath2707/dev:tagname'
+                    sh "docker run -d -p 8081:80 ${DEV_IMAGE}:${IMAGE_TAG}"
                 }
             }
         }
