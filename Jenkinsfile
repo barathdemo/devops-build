@@ -10,7 +10,11 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: "${env.BRANCH_NAME}", url: 'https://github.com/barathdemo/devops-build.git'
+                script {
+                    def branch = env.GIT_BRANCH?.replaceFirst(/^origin\//, '') ?: 'dev'
+                    echo "Checking out branch: ${branch}"
+                    git branch: "${branch}", url: 'https://github.com/barathdemo/devops-build.git'
+                }
             }
         }
 
@@ -47,12 +51,12 @@ pipeline {
                     def port = env.BRANCH_NAME == 'dev' ? '8081' : env.BRANCH_NAME == 'master' ? '8082' : ''
                     if (port) {
                         sh """
-                        echo "Cleaning up containers running on port ${port}..."
-                        CONTAINER_ID=\$(docker ps -q --filter "publish=${port}")
-                        if [ ! -z "\$CONTAINER_ID" ]; then
-                            docker stop \$CONTAINER_ID
-                            docker rm \$CONTAINER_ID
-                        fi
+                            echo "Cleaning up containers running on port ${port}..."
+                            CONTAINER_ID=\$(docker ps -q --filter "publish=${port}")
+                            if [ ! -z "\$CONTAINER_ID" ]; then
+                                docker stop \$CONTAINER_ID
+                                docker rm \$CONTAINER_ID
+                            fi
                         """
                     }
                 }
