@@ -26,21 +26,20 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Compose Build & Push') {
             steps {
                 script {
                     def branch = env.BRANCH_NAME
-                    echo "Current Branch: ${branch}"
+                    def imageName = branch == 'master' ? PROD_IMAGE : DEV_IMAGE
 
-                    if (branch == 'dev') {
-                        sh "docker build -t ${DEV_IMAGE}:${IMAGE_TAG} ."
-                        sh "docker push ${DEV_IMAGE}:${IMAGE_TAG}"
-                    } else if (branch == 'master') {
-                        sh "docker build -t ${PROD_IMAGE}:${IMAGE_TAG} ."
-                        sh "docker push ${PROD_IMAGE}:${IMAGE_TAG}"
-                    } else {
-                        echo "No Docker push configured for this branch"
-                    }
+                    echo "Building and pushing image: ${imageName}:${IMAGE_TAG}"
+
+                    // Override image name using build-arg and tag explicitly
+                    sh """
+                        IMAGE=${imageName}:${IMAGE_TAG} docker-compose build
+                        docker tag ${imageName} ${imageName}:${IMAGE_TAG}
+                        docker push ${imageName}:${IMAGE_TAG}
+                    """
                 }
             }
         }
@@ -51,7 +50,7 @@ pipeline {
                     def port = env.BRANCH_NAME == 'dev' ? '8081' : env.BRANCH_NAME == 'master' ? '8082' : ''
                     if (port) {
                         sh """
-                            echo "Cleaning up containers running on port ${port}..."
+                            echo "Cleaning up containers on port ${port}..."
                             CONTAINER_ID=\$(docker ps -q --filter "publish=${port}")
                             if [ ! -z "\$CONTAINER_ID" ]; then
                                 docker stop \$CONTAINER_ID
@@ -63,14 +62,24 @@ pipeline {
             }
         }
 
-        stage('Run Container') {
+        stage('Run Container with Compose') {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'dev') {
-                        sh "docker run -d -p 8081:80 ${DEV_IMAGE}:${IMAGE_TAG}"
-                    } else if (env.BRANCH_NAME == 'master') {
-                        sh "docker run -d -p 8082:80 ${PROD_IMAGE}:${IMAGE_TAG}"
-                    }
+                    def port = env.BRANCH_NAME == 'dev' ? '8081' : env.BRANCH_NAME == 'master' ? '8082' : ''
+                    def imageName = env.BRANCH_NAME == 'master' ? PROD_IMAGE : DEV_IMAGE
+
+                    // Write override file dynamically
+                    writeFile file: 'docker-compose.override.yml', text: """
+                    version: '3.8'
+                    services:
+                      react_app:
+                        image: ${imageName}:${IMAGE_TAG}
+                        ports:
+                          - "${port}:80"
+                    """
+
+                    // Run using both base + override
+                    sh 'docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d'
                 }
             }
         }
