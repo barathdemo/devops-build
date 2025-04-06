@@ -5,3 +5,8 @@ scrape_configs:
   - job_name: 'react_app'
     static_configs:
       - targets: ['react_app:80']
+
+  - job_name: 'jenkins'
+    metrics_path: /prometheus
+    static_configs:
+      - targets: ['13.126.49.8:8080']
