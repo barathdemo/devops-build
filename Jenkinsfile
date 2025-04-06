@@ -80,5 +80,15 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy Monitoring Stack') {
+            steps {
+                script {
+                    echo "Starting Prometheus and Grafana monitoring stack..."
+                    sh 'docker-compose -f docker-compose.monitoring.yml up -d'
+                    sh 'docker ps'
+                }
+            }
+        }
     }
 }
