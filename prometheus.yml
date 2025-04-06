@@ -2,11 +2,15 @@ global:
   scrape_interval: 5s
 
 scrape_configs:
-  - job_name: 'react_app'
+  - job_name: 'react_app_dev'
     static_configs:
-      - targets: ['react_app:80']
+      - targets: ['react_app_dev:80']
+
+  - job_name: 'react_app_prod'
+    static_configs:
+      - targets: ['react_app_prod:80']
 
   - job_name: 'jenkins'
     metrics_path: /prometheus
     static_configs:
-      - targets: ['13.126.49.8:8080']
+      - targets: ['13.126.49.8:8080']  # replace with your actual Jenkins IP

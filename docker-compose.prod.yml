@@ -1,9 +1,15 @@
 version: "3.8"
 
 services:
-  react_app:
+  react_app_prod:
     build:
       context: .
-    image: barath2707/prod  # This will be overridden in Jenkins
+    image: barath2707/prod
     ports:
-      - "8082:80"           # Default port, will be overridden in Jenkins
+      - "8082:80"
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    external: true
