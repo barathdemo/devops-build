@@ -29,17 +29,19 @@ pipeline {
         stage('Docker Compose Build & Push') {
             steps {
                 script {
-                    def branch = env.BRANCH_NAME
-                    def imageName = branch == 'master' ? PROD_IMAGE : DEV_IMAGE
+                    def composeFile = env.BRANCH_NAME == 'dev' ? 'docker-compose.dev.yml' :
+                                      env.BRANCH_NAME == 'master' ? 'docker-compose.prod.yml' : null
+                    def image = env.BRANCH_NAME == 'dev' ? env.DEV_IMAGE :
+                                env.BRANCH_NAME == 'master' ? env.PROD_IMAGE : null
 
-                    echo "Building and pushing image: ${imageName}:${IMAGE_TAG}"
-
-                    // Override image name using build-arg and tag explicitly
-                    sh """
-                        IMAGE=${imageName}:${IMAGE_TAG} docker-compose build
-                        docker tag ${imageName} ${imageName}:${IMAGE_TAG}
-                        docker push ${imageName}:${IMAGE_TAG}
-                    """
+                    if (composeFile && image) {
+                        echo "Using Compose File: ${composeFile}"
+                        sh "docker-compose -f ${composeFile} build"
+                        sh "docker tag ${image} ${image}:${IMAGE_TAG}"
+                        sh "docker push ${image}:${IMAGE_TAG}"
+                    } else {
+                        echo "No Docker Compose build configured for this branch"
+                    }
                 }
             }
         }
@@ -47,10 +49,11 @@ pipeline {
         stage('Cleanup Existing Containers') {
             steps {
                 script {
-                    def port = env.BRANCH_NAME == 'dev' ? '8081' : env.BRANCH_NAME == 'master' ? '8082' : ''
+                    def port = env.BRANCH_NAME == 'dev' ? '8081' :
+                               env.BRANCH_NAME == 'master' ? '8082' : ''
                     if (port) {
                         sh """
-                            echo "Cleaning up containers on port ${port}..."
+                            echo "Cleaning up containers running on port ${port}..."
                             CONTAINER_ID=\$(docker ps -q --filter "publish=${port}")
                             if [ ! -z "\$CONTAINER_ID" ]; then
                                 docker stop \$CONTAINER_ID
@@ -62,24 +65,18 @@ pipeline {
             }
         }
 
-        stage('Run Container with Compose') {
+        stage('Deploy with Docker Compose') {
             steps {
                 script {
-                    def port = env.BRANCH_NAME == 'dev' ? '8081' : env.BRANCH_NAME == 'master' ? '8082' : ''
-                    def imageName = env.BRANCH_NAME == 'master' ? PROD_IMAGE : DEV_IMAGE
+                    def composeFile = env.BRANCH_NAME == 'dev' ? 'docker-compose.dev.yml' :
+                                      env.BRANCH_NAME == 'master' ? 'docker-compose.prod.yml' : null
 
-                    // Write override file dynamically
-                    writeFile file: 'docker-compose.override.yml', text: """
-                    version: '3.8'
-                    services:
-                      react_app:
-                        image: ${imageName}:${IMAGE_TAG}
-                        ports:
-                          - "${port}:80"
-                    """
-
-                    // Run using both base + override
-                    sh 'docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d'
+                    if (composeFile) {
+                        sh "docker-compose -f ${composeFile} up -d"
+                        sh "docker ps"
+                    } else {
+                        echo "No Compose file found for branch"
+                    }
                 }
             }
         }
