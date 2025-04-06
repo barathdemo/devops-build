@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    def branch = env.GIT_BRANCH?.replaceFirst(/^origin\//, '') ?: 'dev'
+                    def branch = env.BRANCH_NAME
                     echo "Checking out branch: ${branch}"
                     git branch: "${branch}", url: 'https://github.com/barathdemo/devops-build.git'
                 }
@@ -85,8 +85,15 @@ pipeline {
             steps {
                 script {
                     echo "Starting Prometheus and Grafana monitoring stack..."
-                    sh 'docker-compose -f docker-compose.monitoring.yml up -d'
-                    sh 'docker ps'
+
+                    sh '''
+                        echo "Cleaning up previous monitoring containers..."
+                        docker ps -a --filter "name=prometheus" -q | xargs -r docker rm -f
+                        docker ps -a --filter "name=grafana" -q | xargs -r docker rm -f
+
+                        docker-compose -f docker-compose.monitoring.yml up -d --remove-orphans
+                        docker ps
+                    '''
                 }
             }
         }
