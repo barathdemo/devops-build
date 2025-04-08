@@ -79,23 +79,6 @@ pipeline {
                     }
                 }
             }
-        }
-
-        stage('Deploy Monitoring Stack') {
-            steps {
-                script {
-                    echo "Starting Prometheus and Grafana monitoring stack..."
-
-                    sh '''
-                        echo "Cleaning up previous monitoring containers..."
-                        docker ps -a --filter "name=prometheus" -q | xargs -r docker rm -f
-                        docker ps -a --filter "name=grafana" -q | xargs -r docker rm -f
-
-                        docker-compose -f docker-compose.monitoring.yml up -d --remove-orphans
-                        docker ps
-                    '''
-                }
-            }
-        }
+        }      
     }
 }
