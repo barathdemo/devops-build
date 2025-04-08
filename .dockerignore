@@ -13,5 +13,3 @@ Jenkinsfile
 # Docker Compose (not needed inside container)
 docker-compose.*.yml
 
-# React build output
-build/
