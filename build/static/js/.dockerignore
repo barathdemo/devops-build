@@ -1,0 +1,17 @@
+# Git and config
+.git
+.gitignore
+.dockerignore
+
+# Build scripts
+build.sh
+deploy.sh
+
+# Jenkins config
+Jenkinsfile
+
+# Docker Compose (not needed inside container)
+docker-compose.*.yml
+
+# React build output
+build/
